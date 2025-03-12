@@ -1,105 +1,92 @@
 <script lang="ts" setup>
-import { ref, watchEffect } from 'vue'
+import { onMounted } from 'vue'
+import Konva from 'konva'
 
 const props = defineProps<{
     video: HTMLVideoElement
 }>()
 
-const canvas = ref<HTMLCanvasElement | null>(null)
+onMounted(() => {
+    const width = window.innerWidth
+    const height = window.innerHeight
 
-watchEffect(() => {
-    if (canvas.value) {
-        capturarQuadro()
+    const stage = new Konva.Stage({
+        container: 'container',
+        width: width,
+        height: height,
+    })
+
+    const layer = new Konva.Layer()
+
+    // Grupo para aplicar o molde
+    const clipGroup = new Konva.Group({
+        clipFunc: (ctx) => {
+            // Criando a elipse como máscara
+            ctx.beginPath()
+            ctx.ellipse(width / 2, height / 2, 150, 200, 0, 0, Math.PI * 2)
+            ctx.closePath()
+        },
+    })
+
+    // Vídeo (Imagem) dentro do grupo com o molde (com opacidade normal)
+    const videoImageCenter = new Konva.Image({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        image: props.video,
+        x: 0,
+        y: 0,
+    })
+
+    // Adicionando o vídeo central no grupo com o molde
+    clipGroup.add(videoImageCenter)
+
+    // Vídeo fora do molde (com opacidade reduzida)
+    const videoImageBackground = new Konva.Image({
+        width: window.innerWidth / 2,
+        height: window.innerHeight / 2,
+        image: props.video,
+        x: 600,
+        y: 300,
+        opacity: 0.2, // Opacidade reduzida para a parte fora do molde
+    })
+
+    // Função para atualizar o vídeo no canvas
+    const updateVideo = () => {
+        if (!props.video.paused && !props.video.ended) {
+            videoImageBackground.cache() // Cache para otimizar
+            videoImageBackground.getLayer()?.batchDraw() // Redesenha a camada
+            videoImageCenter.cache() // Cache para otimizar
+            videoImageCenter.getLayer()?.batchDraw() // Redesenha a camada
+        }
     }
+
+    // Loop de atualização para cada frame do vídeo
+    props.video.addEventListener('play', () => {
+        const interval = setInterval(() => {
+            updateVideo()
+        }, 1000 / 60) // Aprox. 60 fps
+
+        // Para de atualizar quando o vídeo for pausado ou terminado
+        props.video.addEventListener('pause', () => clearInterval(interval))
+        props.video.addEventListener('ended', () => clearInterval(interval))
+    })
+
+    // Inicia a atualização assim que o vídeo começar a reproduzir
+    if (!props.video.paused && !props.video.ended) {
+        updateVideo()
+    }
+
+    // Adiciona o vídeo de fundo (opacidade reduzida) na camada
+    layer.add(videoImageBackground)
+
+    // Adiciona o grupo com o vídeo central no grupo com o molde
+    layer.add(clipGroup)
+
+    // Adiciona a camada no stage
+    stage.add(layer)
 })
-
-function desenharMolde() {
-    if (canvas.value) {
-        const ctx = canvas.value.getContext('2d')
-        if (ctx) {
-            ctx.drawImage(
-                props.video,
-                0,
-                0,
-                canvas.value.width,
-                canvas.value.height
-            )
-
-            // Desenhado backdrop
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
-            ctx.fillRect(0, 0, canvas.value.width, canvas.value.height)
-
-            // Retângulo para o corpo
-            const bodyWidth = canvas.value.width / 2
-            const bodyHeight = canvas.value.height / 2
-            const bodyX = (canvas.value.width - bodyWidth) / 2
-            const bodyY = (canvas.value.height - bodyHeight) / 2
-
-            ctx.beginPath()
-            ctx.stroke()
-            ctx.fillRect(bodyX, bodyY, bodyWidth, bodyHeight)
-
-            const aspectWidth =
-                (canvas.value.height / canvas.value.width) * bodyWidth
-
-            const aspectHeight =
-                (canvas.value.height / canvas.value.width) * bodyHeight
-
-            const aspectX = bodyWidth - aspectWidth
-            const aspectY = bodyHeight - aspectHeight
-
-            ctx.drawImage(
-                props.video,
-                aspectX,
-                aspectY,
-                aspectWidth,
-                aspectHeight,
-                bodyX,
-                bodyY,
-                bodyWidth,
-                bodyHeight
-            )
-
-            ctx.strokeStyle = 'cyan'
-            ctx.lineWidth = 4
-            ctx.beginPath()
-            ctx.rect(bodyX, bodyY, bodyWidth, bodyHeight)
-            ctx.stroke()
-        }
-    }
-}
-
-function desenharOverlay() {
-    if (canvas.value) {
-        const ctx = canvas.value.getContext('2d')
-        if (ctx) {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
-            ctx.fillRect(0, 0, canvas.value.width, canvas.value.height)
-        }
-    }
-}
-
-function capturarQuadro() {
-    if (!canvas.value || !props.video) return
-
-    // const ctx = canvas.value.getContext('2d')
-    // if (ctx) {
-    //     // ctx.drawImage(
-    //     //     props.video,
-    //     //     0,
-    //     //     0,
-    //     //     canvas.value.width,
-    //     //     canvas.value.height
-    //     // )
-    // }
-    desenharMolde()
-
-    requestAnimationFrame(capturarQuadro)
-}
 </script>
 
 <template>
-    <div class="relative">
-        <canvas ref="canvas" width="1024" height="768" class="static block" />
-    </div>
+    <div id="container"></div>
 </template>
