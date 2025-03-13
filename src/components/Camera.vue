@@ -20,7 +20,9 @@ start()
 watchEffect(() => {
     if (video.value) {
         video.value.srcObject = stream.value!
-        emits('ready', video.value)
+        setTimeout(() => {
+            emits('ready', video.value)
+        }, 500)
     }
 })
 </script>
