@@ -7,25 +7,57 @@ const props = defineProps<{
     video: HTMLVideoElement
 }>()
 
+const models = '/weights'
+
 const stage = shallowRef<Konva.Stage>()
+const videoImageBackground = shallowRef<Konva.Image>()
+const videoImageCenter = shallowRef<Konva.Image>()
 
 const container = useTemplateRef<HTMLDivElement>('container')
+const preview = useTemplateRef<HTMLImageElement>('preview')
+
+const screenWidth = 1024
+const screenHeight = 768
 
 const loadModels = async () => {
-    await faceapi.nets.ssdMobilenetv1.loadFromUri('/models')
-    await faceapi.nets.faceLandmark68Net.loadFromUri('/models')
+    await faceapi.nets.ssdMobilenetv1.loadFromUri(models)
+    await faceapi.nets.faceLandmark68Net.loadFromUri(models)
 }
 
-const detectFace = async () => {
-    await loadModels() // Aguarda o carregamento do modelo antes da detecção
+const detectFace = () => {
+    if (videoImageCenter.value && preview.value) {
+        const x = screenWidth / 4
+        const y = screenHeight / 10
+        const width = screenWidth / 2
+        const height = screenHeight / 1.25
 
-    const detections = await faceapi
-        .detectSingleFace(props.video)
-        .withFaceLandmarks()
+        videoImageCenter.value.toImage({
+            x,
+            y,
+            width,
+            height,
+            callback: (image) => {
+                // DEBUG
+                if (preview.value) {
+                    preview.value.src = image.src
+                }
 
-    console.log(detections)
+                faceapi
+                    .detectSingleFace(image)
+                    .withFaceLandmarks()
+                    .run()
+                    .then((detections) => {
+                        setTimeout(() => {
+                            console.log(detections)
+                            URL.revokeObjectURL(image.src)
+                            requestAnimationFrame(detectFace)
+                        }, 1000)
+                    })
+            },
+        })
+    }
 }
-detectFace() // Agora só executa após os modelos carregarem
+
 const updateVideo = () => {
     if (stage.value) {
         stage.value.batchDraw()
@@ -37,9 +69,6 @@ watchEffect(() => {
     if (!container.value) {
         return false
     }
-
-    const screenWidth = 1024
-    const screenHeight = 768
 
     stage.value = new Konva.Stage({
         container: container.value,
@@ -63,7 +92,7 @@ watchEffect(() => {
         },
     })
 
-    const videoImageBackground = new Konva.Image({
+    videoImageBackground.value = new Konva.Image({
         width: screenWidth,
         height: screenHeight,
         image: props.video,
@@ -72,7 +101,7 @@ watchEffect(() => {
         opacity: 0.4,
     })
 
-    const videoImageCenter = new Konva.Image({
+    videoImageCenter.value = new Konva.Image({
         width: screenWidth,
         height: screenHeight,
         image: props.video,
@@ -80,20 +109,29 @@ watchEffect(() => {
         y: 0,
     })
 
-    layer.add(videoImageBackground)
+    layer.add(videoImageBackground.value)
 
-    clipGroup.add(videoImageCenter)
+    clipGroup.add(videoImageCenter.value)
 
     layer.add(clipGroup)
 
     stage.value.add(layer)
 
     updateVideo()
+    detectFace()
+
+    console.log(detectFace)
 })
+
+await loadModels() // Aguarda o carregamento do modelo antes da detecção
 </script>
 
 <template>
-    <div ref="container"></div>
+    <div>
+        <div ref="container"></div>
+        <!-- Use for debugging-->
+        <img ref="preview" />
+    </div>
 </template>
 
 <style>
