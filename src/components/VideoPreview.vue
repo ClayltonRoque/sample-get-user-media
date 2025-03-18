@@ -1,5 +1,12 @@
 <script lang="ts" setup>
-import { watchEffect, shallowRef, useTemplateRef, computed } from 'vue'
+import {
+    watchEffect,
+    shallowRef,
+    useTemplateRef,
+    ref,
+    computed,
+    onUnmounted,
+} from 'vue'
 import Konva from 'konva'
 import * as faceapi from 'face-api.js'
 
@@ -16,6 +23,10 @@ const models =
 const stage = shallowRef<Konva.Stage>()
 const videoImageBackground = shallowRef<Konva.Image>()
 const videoImageCenter = shallowRef<Konva.Image>()
+const textArea = shallowRef<Konva.Text>()
+
+const text = ref('simple text')
+const score = shallowRef<number | undefined>(0)
 
 const container = useTemplateRef<HTMLDivElement>('container')
 const preview = useTemplateRef<HTMLImageElement>('preview')
@@ -42,10 +53,18 @@ const loadModels = async () => {
     await faceapi.nets.faceLandmark68Net.loadFromUri(models)
 }
 
+let isDetecting = false
+
 const detectFace = () => {
+    if (isDetecting) {
+        return
+    }
+
+    isDetecting = true
+
     if (videoImageCenter.value && preview.value) {
         const x = screenWidth.value / 4
-        const y = screenHeight.value / 10
+        const y = screenHeight.value / 20
         const width = screenWidth.value / 2
         const height = screenHeight.value / 1.25
 
@@ -66,10 +85,13 @@ const detectFace = () => {
                     .run()
                     .then((detections) => {
                         setTimeout(() => {
-                            console.log(detections)
+                            console.log(detections?.detection.score)
+                            score.value = detections?.detection.score
+
                             URL.revokeObjectURL(image.src)
+                            isDetecting = false
                             requestAnimationFrame(detectFace)
-                        }, 1000)
+                        }, 200)
                     })
             },
         })
@@ -82,6 +104,10 @@ const updateVideo = () => {
         requestAnimationFrame(updateVideo)
     }
 }
+
+onUnmounted(() => {
+    isDetecting = true // Impede novas execuções de detectFace
+})
 
 watchEffect(() => {
     if (!container.value) {
@@ -110,6 +136,24 @@ watchEffect(() => {
         },
     })
 
+    if (score.value === undefined) {
+        text.value = 'Camera indisponível'
+    } else if (score.value < 0.8) {
+        text.value =
+            'posicione a camera de forma que seu rosto fique centralizado'
+    } else if (score.value > 0.95) {
+        text.value = 'segure a posição por 3 segundos'
+    }
+
+    textArea.value = new Konva.Text({
+        x: screenWidth.value / 7,
+        y: screenHeight.value / 1.15,
+        text: text.value,
+        fontSize: 14,
+        fontFamily: 'Calibri',
+        fill: 'green',
+    })
+
     videoImageBackground.value = new Konva.Image({
         width: screenWidth.value,
         height: screenHeight.value,
@@ -129,6 +173,8 @@ watchEffect(() => {
 
     layer.add(videoImageBackground.value)
 
+    layer.add(textArea.value)
+
     clipGroup.add(videoImageCenter.value)
 
     layer.add(clipGroup)
@@ -137,8 +183,6 @@ watchEffect(() => {
 
     updateVideo()
     detectFace()
-
-    console.log(detectFace)
 })
 
 await loadModels() // Aguarda o carregamento do modelo antes da detecção
