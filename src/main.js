@@ -1,9 +1,9 @@
 import './assets/main.css'
 
 import { createApp } from 'vue'
-import Index from '@/pages/index.vue'
-import router from '@/router/index.ts'
+import App from '@/App.vue' // Alterado para o layout principal
+import router from '@/router/index.js'
 
-const app = createApp(Index)
+const app = createApp(App)
 app.use(router)
 app.mount('#app')

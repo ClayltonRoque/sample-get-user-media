@@ -25,7 +25,7 @@ const videoImageBackground = shallowRef<Konva.Image>()
 const videoImageCenter = shallowRef<Konva.Image>()
 const textArea = shallowRef<Konva.Text>()
 
-const text = ref('simple text')
+const text = ref('agurde um momento')
 const score = shallowRef<number | undefined>(0)
 
 const container = useTemplateRef<HTMLDivElement>('container')
@@ -91,7 +91,7 @@ const detectFace = () => {
                             URL.revokeObjectURL(image.src)
                             isDetecting = false
                             requestAnimationFrame(detectFace)
-                        }, 200)
+                        }, 1000)
                     })
             },
         })
@@ -137,21 +137,21 @@ watchEffect(() => {
     })
 
     if (score.value === undefined) {
-        text.value = 'Camera indisponível'
-    } else if (score.value < 0.8) {
-        text.value =
-            'posicione a camera de forma que seu rosto fique centralizado'
-    } else if (score.value > 0.95) {
-        text.value = 'segure a posição por 3 segundos'
+        text.value = 'CENTRALIZE O ROSTO'
+    } else if (score.value > 0.85) {
+        text.value = 'MANTENHA A POSIÇÃO'
     }
 
     textArea.value = new Konva.Text({
-        x: screenWidth.value / 7,
-        y: screenHeight.value / 1.15,
+        x: 0,
+        y: screenHeight.value / 1.125,
+        width: screenWidth.value,
         text: text.value,
-        fontSize: 14,
+        fontSize: 20,
+        fontStyle: 'bold',
         fontFamily: 'Calibri',
-        fill: 'green',
+        fill: 'yellow',
+        align: 'center',
     })
 
     videoImageBackground.value = new Konva.Image({
