@@ -11,26 +11,27 @@ import Konva from 'konva'
 import * as faceapi from 'face-api.js'
 import { useStorage } from '@vueuse/core'
 
-const myPhotos = useStorage<string[]>('my-photos', [])
-
-const props = defineProps<{
-    video: HTMLVideoElement
-}>()
-
 const models =
     process.env.NODE_ENV === 'production' &&
     process.env.DEPLOY_TARGET === 'github'
         ? '/sample-get-user-media/weights'
         : '/weights'
 
+const props = defineProps<{
+    video: HTMLVideoElement
+}>()
+
+const myPhotos = useStorage<string[]>('my-photos', [])
+
+const text = ref('aguarde um momento')
+const score = ref<number | undefined>(0)
+const countdownToTakePhoto = ref(3)
+const isDetecting = shallowRef<boolean>()
+
 const stage = shallowRef<Konva.Stage>()
 const videoImageBackground = shallowRef<Konva.Image>()
 const videoImageCenter = shallowRef<Konva.Image>()
 const textArea = shallowRef<Konva.Text>()
-
-const text = ref('aguarde um momento')
-const score = shallowRef<number | undefined>(0)
-const countdownToTakePhoto = shallowRef(3)
 
 const container = useTemplateRef<HTMLDivElement>('container')
 const preview = useTemplateRef<HTMLImageElement>('preview')
@@ -53,18 +54,15 @@ const screenHeight = computed(() => {
 })
 
 const loadModels = async () => {
-    await faceapi.nets.ssdMobilenetv1.loadFromUri(models)
-    await faceapi.nets.faceLandmark68Net.loadFromUri(models)
+    await faceapi.nets.tinyFaceDetector.loadFromUri(models)
 }
 
-let isDetecting = false
-
 const detectFace = () => {
-    if (isDetecting) {
+    if (isDetecting.value) {
         return
     }
 
-    isDetecting = true
+    isDetecting.value = true
 
     if (videoImageCenter.value && preview.value) {
         const x = screenWidth.value / 4
@@ -84,24 +82,23 @@ const detectFace = () => {
                 }
 
                 faceapi
-                    .detectSingleFace(image)
-                    .withFaceLandmarks()
-                    .run()
+                    .tinyFaceDetector(
+                        image,
+                        new faceapi.TinyFaceDetectorOptions()
+                    )
                     .then((detections) => {
                         setTimeout(() => {
-                            console.log(detections?.detection.score)
-                            score.value = detections?.detection.score
-
+                            score.value = detections[0]?.score
+                            console.log(detections)
                             URL.revokeObjectURL(image.src)
-                            isDetecting = false
+                            isDetecting.value = false
                             requestAnimationFrame(detectFace)
-                        }, 1000)
+                        }, 500)
                     })
             },
         })
     }
 }
-
 const updateVideo = () => {
     if (stage.value) {
         stage.value.batchDraw()
@@ -110,7 +107,7 @@ const updateVideo = () => {
 }
 
 onUnmounted(() => {
-    isDetecting = true // Impede novas execuções de detectFace
+    isDetecting.value = true // Impede novas execuções de detectFace
 })
 
 watchEffect(() => {
@@ -143,14 +140,17 @@ watchEffect(() => {
     if (score.value === undefined) {
         text.value = 'CENTRALIZE O ROSTO'
         countdownToTakePhoto.value = 3
-    } else if (score.value > 0.85) {
+    } else if (score.value > 0.5) {
         text.value = 'MANTENHA A POSIÇÃO'
-        setTimeout(() => {
+
+        if (score.value > 0.5) {
             countdownToTakePhoto.value = countdownToTakePhoto.value - 1
-        }, 1000)
+        } else {
+            countdownToTakePhoto.value = 3
+        }
     }
 
-    if (countdownToTakePhoto.value === 0) {
+    if (countdownToTakePhoto.value === 0 && preview.value) {
         myPhotos.value.push(preview.value.src)
         text.value = 'FOTO TIRADA'
     }
@@ -203,6 +203,7 @@ await loadModels() // Aguarda o carregamento do modelo antes da detecção
 
 <template>
     <div>
+        <pre>{{ countdownToTakePhoto }}</pre>
         <div ref="container"></div>
         <!-- Use for debugging-->
         <img ref="preview" />
