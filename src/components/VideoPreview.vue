@@ -9,6 +9,9 @@ import {
 } from 'vue'
 import Konva from 'konva'
 import * as faceapi from 'face-api.js'
+import { useStorage } from '@vueuse/core'
+
+const myPhotos = useStorage<string[]>('my-photos', [])
 
 const props = defineProps<{
     video: HTMLVideoElement
@@ -25,8 +28,9 @@ const videoImageBackground = shallowRef<Konva.Image>()
 const videoImageCenter = shallowRef<Konva.Image>()
 const textArea = shallowRef<Konva.Text>()
 
-const text = ref('agurde um momento')
+const text = ref('aguarde um momento')
 const score = shallowRef<number | undefined>(0)
+const countdownToTakePhoto = shallowRef(3)
 
 const container = useTemplateRef<HTMLDivElement>('container')
 const preview = useTemplateRef<HTMLImageElement>('preview')
@@ -138,8 +142,17 @@ watchEffect(() => {
 
     if (score.value === undefined) {
         text.value = 'CENTRALIZE O ROSTO'
+        countdownToTakePhoto.value = 3
     } else if (score.value > 0.85) {
         text.value = 'MANTENHA A POSIÇÃO'
+        setTimeout(() => {
+            countdownToTakePhoto.value = countdownToTakePhoto.value - 1
+        }, 1000)
+    }
+
+    if (countdownToTakePhoto.value === 0) {
+        myPhotos.value.push(preview.value.src)
+        text.value = 'FOTO TIRADA'
     }
 
     textArea.value = new Konva.Text({
