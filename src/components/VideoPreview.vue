@@ -202,26 +202,12 @@ await loadModels() // Aguarda o carregamento do modelo antes da detecção
 </script>
 
 <template>
-    <div class="container mx-auto max-w-7xl">
-        <pre>{{ countdownToTakePhoto }}</pre>
+    <div class="flex justify-center container mx-auto max-w-7xl" id="container">
         <div ref="container"></div>
         <!-- Use for debugging-->
-        <img ref="preview" />
+        <img
+            class="absolute w-0 h-0 top-0 left-0 opacity-0 pointer-events-none"
+            ref="preview"
+        />
     </div>
 </template>
-
-<style>
-#container {
-    .konvajs-content {
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
-    }
-    canvas {
-        border-radius: 20px;
-        position: static !important;
-        width: 800px !important;
-        height: 800px !important;
-    }
-}
-</style>

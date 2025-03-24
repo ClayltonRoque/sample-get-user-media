@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
+console.log(process.env.DEPLOY_TARGET)
 // https://vite.dev/config/
 export default defineConfig({
     base:
