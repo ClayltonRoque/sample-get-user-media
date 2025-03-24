@@ -13,7 +13,7 @@ const videoPreview = shallowRef<HTMLVideoElement | null>(null)
             @ready="(video) => (videoPreview = video)"
             class="absolute w-0 h-0 top-0 left-0 opacity-0 pointer-events-none"
         />
-        <div class="flex gap-8 items-center justify-center h-screen w-full">
+        <div class="flex items-center justify-center h-screen w-full">
             <Suspense>
                 <VideoPreview v-if="videoPreview" :video="videoPreview" />
             </Suspense>

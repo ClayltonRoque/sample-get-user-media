@@ -202,7 +202,7 @@ await loadModels() // Aguarda o carregamento do modelo antes da detecção
 </script>
 
 <template>
-    <div>
+    <div class="container mx-auto max-w-7xl">
         <pre>{{ countdownToTakePhoto }}</pre>
         <div ref="container"></div>
         <!-- Use for debugging-->
