@@ -53,6 +53,8 @@ const screenHeight = computed(() => {
     return props.video.videoHeight
 })
 
+console.log(screenHeight.value, props.video.videoWidth, window.innerWidth)
+
 const loadModels = async () => {
     await faceapi.nets.tinyFaceDetector.loadFromUri(models)
 }
@@ -125,15 +127,27 @@ watchEffect(() => {
 
     const clipGroup = new Konva.Group({
         clipFunc: (ctx) => {
-            ctx.ellipse(
-                screenWidth.value / 2,
-                screenHeight.value / 2.25,
-                screenWidth.value / 4,
-                screenHeight.value / 2.5,
-                0,
-                0,
-                Math.PI * 2
-            )
+            if (window.innerWidth > window.innerHeight) {
+                ctx.ellipse(
+                    screenWidth.value / 2,
+                    screenHeight.value / 2.25,
+                    screenWidth.value / 4,
+                    screenHeight.value / 2.5,
+                    0,
+                    0,
+                    Math.PI * 2
+                )
+            } else {
+                ctx.ellipse(
+                    screenWidth.value / 2,
+                    screenHeight.value / 2.25,
+                    screenWidth.value / 2.5,
+                    screenHeight.value / 2.5,
+                    0,
+                    0,
+                    Math.PI * 2
+                )
+            }
         },
     })
 
