@@ -13,6 +13,10 @@ const routes = [
                 component: Index,
             },
             {
+                path: 'faceCheck',
+                component: () => import('@/pages/faceCheck.vue'),
+            },
+            {
                 path: 'listPhotos',
                 component: listPhotos,
             },
